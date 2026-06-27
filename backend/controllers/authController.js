@@ -85,45 +85,6 @@ exports.updateProfile = catchAsyncErrors(async (req, res, next) => {
     .json({ success: true, message: "Profile updated successfully" });
 });
 
-exports.getAllUsers = catchAsyncErrors(async (req, res, next) => {
-  const users = await User.find();
-  res.status(200).json({ success: true, users });
-});
-
-exports.getSingleUser = catchAsyncErrors(async (req, res, next) => {
-  const user = await User.findById(req.params.id);
-
-  if (!user) {
-    return next(new ErrorHandler("User not found", 404));
-  }
-
-  res.status(200).json({ success: true, user });
-});
-
-exports.updateUserRole = catchAsyncErrors(async (req, res, next) => {
-  const { name, email, role } = req.body;
-  const user = await User.findByIdAndUpdate(
-    req.params.id,
-    { $set: { name, email, role } },
-    { new: true, runValidators: true },
-  );
-
-  if (!user) {
-    return next(new ErrorHandler("User not found", 404));
-  }
-
-  res.status(200).json({ success: true, user });
-});
-
-exports.deleteUser = catchAsyncErrors(async (req, res, next) => {
-  const user = await User.findById(req.params.id);
-  if (!user) {
-    return next(new ErrorHandler("User not found", 404));
-  }
-  await user.deleteOne();
-  res.status(200).json({ success: true, message: "User deleted" });
-});
-
 exports.refreshToken = catchAsyncErrors(async (req, res, next) => {
   const token = req.cookies.refreshToken;
   if (!token) {
