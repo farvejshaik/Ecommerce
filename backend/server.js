@@ -5,6 +5,7 @@ const morgan = require("morgan");
 const cookieParser = require("cookie-parser");
 const connectDB = require("./config/db");
 const authRoutes = require("./routes/authRoutes");
+const productRoutes = require("./routes/productRoutes");
 const errorMiddleware = require("./middleware/error");
 
 dotenv.config();
@@ -20,6 +21,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 app.use("/api/v1", authRoutes);
+app.use("/api/v1", productRoutes);
 app.use(errorMiddleware);
 
 app.use("/uploads", express.static("uploads"));
