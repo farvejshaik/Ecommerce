@@ -8,6 +8,7 @@ A RESTful API backend for an ecommerce application built with Express, MongoDB, 
 - **Framework:** Express 5
 - **Database:** MongoDB with Mongoose 9
 - **Auth:** JWT (access + refresh tokens), bcryptjs
+- **File Uploads:** Multer + Cloudinary
 - **Security:** Helmet, cookie-parser
 
 ## Project Structure
@@ -15,21 +16,27 @@ A RESTful API backend for an ecommerce application built with Express, MongoDB, 
 ```
 backend/
 ├── config/
-│   └── db.js              # MongoDB connection
+│   └── db.js                 # MongoDB connection
 ├── controllers/
-│   └── authController.js  # Auth route handlers
+│   ├── authController.js     # Auth route handlers
+│   └── productController.js  # Product route handlers
 ├── middleware/
-│   ├── auth.js            # Authentication & role authorization
-│   └── error.js           # Global error handler
+│   ├── auth.js               # Authentication & role authorization
+│   ├── error.js              # Global error handler
+│   └── multer.js             # File upload (Cloudinary)
 ├── models/
-│   └── User.js            # User schema & methods
+│   ├── Product.js            # Product schema & methods
+│   └── User.js               # User schema & methods
 ├── routes/
-│   └── authRoutes.js      # Auth endpoint definitions
+│   ├── authRoutes.js         # Auth endpoint definitions
+│   └── productRoutes.js      # Product endpoint definitions
 ├── utils/
-│   ├── catchAsyncErrors.js # Async error wrapper
-│   ├── errorHandler.js     # Custom error class
-│   └── sendToken.js        # JWT cookie + response helper
-├── server.js              # App entry point
+│   ├── apiFeatures.js        # Search, filter, sort, pagination
+│   ├── catchAsyncErrors.js   # Async error wrapper
+│   ├── cloudinary.js         # Cloudinary config
+│   ├── errorHandler.js       # Custom error class
+│   └── sendToken.js          # JWT cookie + response helper
+├── server.js                 # App entry point
 └── package.json
 ```
 
@@ -51,6 +58,9 @@ JWT_SECRET=your_secret_key
 JWT_EXPIRE=15m
 JWT_REFRESH_EXPIRE=7d
 JWT_COOKIE_EXPIRE=7
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
 ```
 
 ### 3. Run the server
@@ -67,45 +77,82 @@ npm start
 
 All routes are prefixed with `/api/v1`.
 
-### Public
+### Auth - Public
 
-| Method | Endpoint              | Description         |
-| ------ | --------------------- | ------------------- |
-| POST   | `/auth/register`      | Register a new user |
-| POST   | `/auth/login`         | Login               |
-| POST   | `/auth/logout`        | Logout              |
-| POST   | `/auth/refresh`       | Refresh access token|
+| Method | Endpoint              | Description          |
+| ------ | --------------------- | -------------------- |
+| POST   | `/auth/register`      | Register a new user  |
+| POST   | `/auth/login`         | Login                |
+| POST   | `/auth/logout`        | Logout               |
+| POST   | `/auth/refresh`       | Refresh access token |
 
-### Protected (Authenticated User)
+### Auth - Protected
 
-| Method | Endpoint               | Description         |
-| ------ | ---------------------- | ------------------- |
-| GET    | `/auth/me`             | Get current user    |
-| PUT    | `/auth/update/password`| Change password     |
-| PUT    | `/auth/update/profile` | Update name/email   |
+| Method | Endpoint               | Description      |
+| ------ | ---------------------- | ---------------- |
+| GET    | `/auth/me`             | Get current user |
+| PUT    | `/auth/update/password`| Change password  |
+| PUT    | `/auth/update/profile` | Update name/email|
 
-### Admin Only
+### Products - Public
 
-| Method | Endpoint           | Description          |
-| ------ | ------------------ | -------------------- |
-| GET    | `/admin/users`     | Get all users        |
-| GET    | `/admin/user/:id`  | Get single user      |
-| PUT    | `/admin/user/:id`  | Update user role     |
-| DELETE | `/admin/user/:id`  | Delete user          |
+| Method | Endpoint            | Description                    |
+| ------ | ------------------- | ------------------------------ |
+| GET    | `/products`         | Get all products (search, filter, paginate) |
+| GET    | `/product/:id`      | Get single product details     |
+| GET    | `/product/reviews`  | Get reviews for a product      |
 
-## User Model
+### Products - Protected
+
+| Method | Endpoint            | Description      |
+| ------ | ------------------- | ---------------- |
+| PUT    | `/product/review`   | Add/update review|
+| DELETE | `/product/review`   | Delete review    |
+
+### Products - Admin Only
+
+| Method | Endpoint               | Description       |
+| ------ | ---------------------- | ----------------- |
+| POST   | `/admin/product/new`   | Create product    |
+| PUT    | `/admin/product/:id`   | Update product    |
+| DELETE | `/admin/product/:id`   | Delete product    |
+
+## Models
+
+### User
 
 ```js
 {
   name: String,       // required, max 100 chars
   email: String,      // required, unique, validated
-  password: String,   // required, min 6 chars, hashed with bcrypt, hidden by default
+  password: String,   // required, min 6 chars, hashed, hidden by default
   role: String,       // "user" | "admin", default "user"
   avatar: {
     public_id: String,
     url: String
   },
   refreshToken: String,
+  createdAt: Date
+}
+```
+
+### Product
+
+```js
+{
+  name: String,        // required, max 100 chars
+  price: Number,       // required, min 0
+  description: String, // required, max 2000 chars
+  category: String,    // required
+  stock: Number,       // required, default 1, min 0
+  images: [{
+    public_id: String,
+    url: String
+  }],
+  ratings: Number,     // 0-5
+  numOfReviews: Number,
+  reviews: [Review],
+  user: ObjectId,      // ref User
   createdAt: Date
 }
 ```
